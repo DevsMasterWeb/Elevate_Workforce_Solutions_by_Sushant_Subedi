@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the job portal, either a candidate or an employer.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User's email address" },
+        "displayName": { "type": "string", "description": "User's full name" },
+        "role": { "type": "string", "enum": ["candidate", "employer", "admin"], "description": "User's role in the system" },
+        "bio": { "type": "string", "description": "Short biography or company description" },
+        "avatarUrl": { "type": "string", "format": "uri", "description": "URL to the user's profile picture" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the user account was created" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "A job listing posted by an employer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique job ID" },
+        "title": { "type": "string", "description": "Job title" },
+        "description": { "type": "string", "description": "Detailed job description" },
+        "companyId": { "type": "string", "description": "ID of the company posting the job" },
+        "companyName": { "type": "string", "description": "Name of the company posting the job" },
+        "location": { "type": "string", "description": "Job location (e.g., Kathmandu, Remote)" },
+        "salaryRange": { "type": "string", "description": "Expected salary range" },
+        "type": { "type": "string", "enum": ["full-time", "part-time", "contract", "internship"], "description": "Employment type" },
+        "category": { "type": "string", "description": "Job category (e.g., IT, Marketing, Sales)" },
+        "postedAt": { "type": "string", "format": "date-time", "description": "When the job was posted" },
+        "status": { "type": "string", "enum": ["active", "closed"], "description": "Current status of the job listing" },
+        "employerId": { "type": "string", "description": "UID of the employer who posted the job" }
+      },
+      "required": ["id", "title", "description", "companyId", "companyName", "type", "postedAt", "status", "employerId"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "A job application submitted by a candidate.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique application ID" },
+        "jobId": { "type": "string", "description": "ID of the job being applied for" },
+        "jobTitle": { "type": "string", "description": "Title of the job being applied for" },
+        "candidateId": { "type": "string", "description": "UID of the candidate applying" },
+        "candidateName": { "type": "string", "description": "Name of the candidate" },
+        "candidateEmail": { "type": "string", "format": "email", "description": "Email of the candidate" },
+        "resumeUrl": { "type": "string", "format": "uri", "description": "URL to the candidate's resume" },
+        "coverLetter": { "type": "string", "description": "Candidate's cover letter" },
+        "status": { "type": "string", "enum": ["pending", "reviewed", "shortlisted", "accepted", "rejected"], "description": "Status of the application" },
+        "appliedAt": { "type": "string", "format": "date-time", "description": "When the application was submitted" },
+        "employerId": { "type": "string", "description": "UID of the employer who posted the job" }
+      },
+      "required": ["id", "jobId", "candidateId", "candidateName", "candidateEmail", "status", "appliedAt", "employerId"]
+    },
+    "Company": {
+      "title": "Company",
+      "description": "A company profile.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique company ID" },
+        "name": { "type": "string", "description": "Company name" },
+        "description": { "type": "string", "description": "Company description" },
+        "logoUrl": { "type": "string", "format": "uri", "description": "URL to the company logo" },
+        "website": { "type": "string", "format": "uri", "description": "Company website" },
+        "location": { "type": "string", "description": "Company headquarters" },
+        "ownerId": { "type": "string", "description": "UID of the user who owns this company profile" }
+      },
+      "required": ["id", "name", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Job listings"
+    },
+    "/applications/{applicationId}": {
+      "schema": "Application",
+      "description": "Job applications"
+    },
+    "/companies/{companyId}": {
+      "schema": "Company",
+      "description": "Company profiles"
+    }
+  }
+}

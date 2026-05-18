@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  fullName     String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("JobSeeker") // "Employer" or "JobSeeker"
+  createdAt    DateTime @default(now())
+
+  company          Company?
+  jobSeekerProfile JobSeekerProfile?
+}
+
+model Company {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique
+  companyName  String
+  description  String?  @db.Text
+  address      String?
+  contactEmail String?
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobs Job[]
+}
+
+model Job {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  title       String
+  description String   @db.Text
+  requirements String? @db.Text
+  benefits    String?  @db.Text
+  location    String
+  salary      Float?
+  salaryRange String?
+  category    String?  @default("Other")
+  jobType     String?  @default("Full-time")
+  companyName String?
+  isFeatured  Boolean  @default(false)
+  deadline    DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+}
+
+model JobSeekerProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  skills    String?
+  education String?
+  phone     String?
+  address   String?
+  bio       String?  @db.Text
+  cvPath    String?
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+}
+
+model JobApplication {
+  id                 Int      @id @default(autoincrement())
+  jobId              Int
+  jobSeekerProfileId Int
+  coverLetter        String?  @db.Text
+  status             String   @default("Pending")
+  atsScore           Int?     // AI-generated match score (0-100)
+  aiFeedback         String?  @db.Text // AI's reasoning for the score
+  appliedAt          DateTime @default(now())
+
+  job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobSeekerProfile JobSeekerProfile @relation(fields: [jobSeekerProfileId], references: [id], onDelete: Cascade)
+}

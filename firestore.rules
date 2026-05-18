@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string (optional)
+    //   - role: string (required, ['candidate', 'employer', 'admin'])
+    //   - bio: string (optional)
+    //   - avatarUrl: string (optional, URL format)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: jobs
+    // Document ID: {jobId}
+    // Fields:
+    //   - id: string (required)
+    //   - title: string (required, size < 100)
+    //   - description: string (required, size < 5000)
+    //   - companyId: string (required)
+    //   - companyName: string (required)
+    //   - location: string (required)
+    //   - salaryRange: string (optional)
+    //   - type: string (required, ['full-time', 'part-time', 'contract', 'internship'])
+    //   - category: string (required)
+    //   - postedAt: timestamp (required)
+    //   - status: string (required, ['active', 'closed'])
+    //   - employerId: string (required)
+    //
+    // Collection: applications
+    // Document ID: {applicationId}
+    // Fields:
+    //   - id: string (required)
+    //   - jobId: string (required)
+    //   - jobTitle: string (required)
+    //   - candidateId: string (required)
+    //   - candidateName: string (required)
+    //   - candidateEmail: string (required, email format)
+    //   - resumeUrl: string (required, URL format)
+    //   - coverLetter: string (optional, size < 2000)
+    //   - status: string (required, ['pending', 'reviewed', 'shortlisted', 'accepted', 'rejected'])
+    //   - appliedAt: timestamp (required)
+    //   - employerId: string (required)
+    //
+    // Collection: companies
+    // Document ID: {companyId}
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - logoUrl: string (optional, URL format)
+    //   - website: string (optional, URL format)
+    //   - location: string (optional)
+    //   - ownerId: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "subedisushant781@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['candidate', 'employer', 'admin'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidJob(data) {
+      return hasRequiredFields(['id', 'title', 'description', 'companyId', 'companyName', 'type', 'postedAt', 'status', 'employerId']) &&
+             data.title is string && data.title.size() < 100 &&
+             data.description is string && data.description.size() < 5000 &&
+             data.type in ['full-time', 'part-time', 'contract', 'internship'] &&
+             data.status in ['active', 'closed'] &&
+             data.employerId == request.auth.uid &&
+             data.postedAt is timestamp;
+    }
+
+    function isValidApplication(data) {
+      return hasRequiredFields(['id', 'jobId', 'candidateId', 'candidateName', 'candidateEmail', 'status', 'appliedAt', 'employerId']) &&
+             data.candidateId == request.auth.uid &&
+             isValidEmail(data.candidateEmail) &&
+             data.status in ['pending', 'reviewed', 'shortlisted', 'accepted', 'rejected'] &&
+             data.appliedAt is timestamp;
+    }
+
+    function isValidCompany(data) {
+      return hasRequiredFields(['id', 'name', 'ownerId']) &&
+             data.name is string && data.name.size() < 100 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role != 'admin' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidJob(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.employerId == request.auth.uid && isValidJob(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.employerId == request.auth.uid || isAdmin());
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (resource.data.candidateId == request.auth.uid || resource.data.employerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidApplication(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (resource.data.candidateId == request.auth.uid && isValidApplication(request.resource.data) && request.resource.data.status == resource.data.status) ||
+        (resource.data.employerId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+      );
+      allow delete: if isAuthenticated() && (resource.data.candidateId == request.auth.uid || isAdmin());
+    }
+
+    match /companies/{companyId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidCompany(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.ownerId == request.auth.uid && isValidCompany(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

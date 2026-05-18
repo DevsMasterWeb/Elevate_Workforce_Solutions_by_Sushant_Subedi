@@ -1,0 +1,9 @@
+{
+  "name": "Elevate Workforce Solutions",
+  "description": "A premium job portal for executive recruitment and workforce solutions, featuring secure authentication, job listings, and company dashboards.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

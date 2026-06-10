@@ -1,10 +1,7 @@
 {
     "functions": {
       "api/index.ts": {
-        "includeFiles": [
-          "node_modules/.prisma/client/**",
-          "prisma/schema.prisma"
-        ]
+        "includeFiles": "node_modules/.prisma/client/**"
       }
     },
     "rewrites": [

@@ -23,15 +23,6 @@ app.use(express.urlencoded({ extended: true }));
 // Static files for uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
 
-// Normalize Vercel Serverless path stripping
-app.use((req, res, next) => {
-  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/uploads')) {
-    // If Vercel stripped the /api prefix, prepend it so our structured Express API routes match perfectly
-    req.url = '/api' + req.url;
-  }
-  next();
-});
-
 // API Routes
 app.use('/api/auth', AuthController);
 app.use('/api/jobs', JobsController);
@@ -78,7 +69,7 @@ app.get('/api/db-test', async (req, res) => {
 });
 
 // Serve static elements in Production or non-dev environments
-if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
+if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(process.cwd(), 'dist');
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
@@ -86,31 +77,28 @@ if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {
   });
 }
 
-// Only listen locally or on long-running processes (not under serverless Vercel runtime)
-if (process.env.VERCEL !== '1') {
-  const PORT = parseInt(process.env.PORT || '3000', 10);
-  
-  if (process.env.NODE_ENV !== 'production') {
-    // Local Vite Development Support - Dynamic import
-    import('vite').then(({ createServer: createViteServer }) => {
-      createViteServer({
-        server: { middlewareMode: true },
-        appType: 'spa',
-      }).then((vite) => {
-        app.use(vite.middlewares);
-        app.listen(PORT, '0.0.0.0', () => {
-          console.log(`Development server booted on http://localhost:${PORT}`);
-        });
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+if (process.env.NODE_ENV !== 'production') {
+  // Local Vite Development Support - Dynamic import
+  import('vite').then(({ createServer: createViteServer }) => {
+    createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    }).then((vite) => {
+      app.use(vite.middlewares);
+      app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Development server booted on http://localhost:${PORT}`);
       });
-    }).catch((err) => {
-      console.error('Failed to load Vite development server:', err);
     });
-  } else {
-    // Normal self-hosted production
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Production server running on port ${PORT}`);
-    });
-  }
+  }).catch((err) => {
+    console.error('Failed to load Vite development server:', err);
+  });
+} else {
+  // Normal self-hosted production
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Production server running on port ${PORT}`);
+  });
 }
 
 export default app;

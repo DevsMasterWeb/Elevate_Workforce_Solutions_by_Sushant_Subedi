@@ -3,6 +3,7 @@ import path from 'path';
 import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
+import prisma from './src/server/Data/AppDbContext';
 
 // Import Controllers
 import AuthController from './src/server/Controllers/AuthController';
@@ -30,6 +31,32 @@ app.use('/api/applications', ApplicationsController);
 app.use('/api/jobseeker-profile', JobSeekerProfileController);
 app.use('/api/analytics', AnalyticsController);
 app.use('/api/company', CompanyController);
+
+// Diagnostic DB connection tester
+app.get('/api/db-test', async (req, res) => {
+  try {
+    const dbUrl = process.env.DATABASE_URL || 'Not Set';
+    const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
+    
+    const userCount = await prisma.user.count();
+    res.json({
+      success: true,
+      message: 'Successfully connected to the database!',
+      databaseUrlMasked: maskedUrl,
+      userCount
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to connect to the database.',
+      error: error.message,
+      stack: error.stack,
+      databaseUrlMasked: process.env.DATABASE_URL 
+        ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':****@') 
+        : 'Not Set',
+    });
+  }
+});
 
 // Serve static elements in Production or non-dev environments
 if (process.env.NODE_ENV === 'production' || process.env.VERCEL === '1') {

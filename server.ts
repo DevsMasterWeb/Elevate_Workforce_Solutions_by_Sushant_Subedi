@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
-import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import prisma from './src/server/Data/AppDbContext';
 
@@ -72,15 +71,19 @@ if (process.env.VERCEL !== '1') {
   const PORT = parseInt(process.env.PORT || '3000', 10);
   
   if (process.env.NODE_ENV !== 'production') {
-    // Local Vite Development Support
-    createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    }).then((vite) => {
-      app.use(vite.middlewares);
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Development server booted on http://localhost:${PORT}`);
+    // Local Vite Development Support - Dynamic import
+    import('vite').then(({ createServer: createViteServer }) => {
+      createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      }).then((vite) => {
+        app.use(vite.middlewares);
+        app.listen(PORT, '0.0.0.0', () => {
+          console.log(`Development server booted on http://localhost:${PORT}`);
+        });
       });
+    }).catch((err) => {
+      console.error('Failed to load Vite development server:', err);
     });
   } else {
     // Normal self-hosted production
@@ -91,3 +94,4 @@ if (process.env.VERCEL !== '1') {
 }
 
 export default app;
+

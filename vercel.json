@@ -1,11 +1,5 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "api/index.ts",
-        "use": "@vercel/node"
-      }
-    ],
+    "cleanUrls": true,
     "rewrites": [
       {
         "source": "/api/:path*",
@@ -13,15 +7,11 @@
       },
       {
         "source": "/uploads/:path*",
-        "destination": "/public/uploads/:path*"
-      },
-      {
-        "source": "/assets/:path*",
-        "destination": "/dist/assets/:path*"
+        "destination": "/api/index.ts"
       },
       {
         "source": "/(.*)",
-        "destination": "/dist/index.html"
+        "destination": "/index.html"
       }
     ]
   }

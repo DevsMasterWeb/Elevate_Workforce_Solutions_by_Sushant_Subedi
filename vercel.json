@@ -1,5 +1,4 @@
 {
-    "cleanUrls": true,
     "rewrites": [
       {
         "source": "/api/:path*",
@@ -10,8 +9,9 @@
         "destination": "/api/index.ts"
       },
       {
-        "source": "/((?!api|uploads).*)*",
+        "source": "/:path*",
         "destination": "/index.html"
       }
     ]
   }
+  

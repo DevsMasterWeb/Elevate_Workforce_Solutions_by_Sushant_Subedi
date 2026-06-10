@@ -23,6 +23,15 @@ app.use(express.urlencoded({ extended: true }));
 // Static files for uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
 
+// Normalize Vercel Serverless path stripping
+app.use((req, res, next) => {
+  if (req.url && !req.url.startsWith('/api') && !req.url.startsWith('/uploads')) {
+    // If Vercel stripped the /api prefix, prepend it so our structured Express API routes match perfectly
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // API Routes
 app.use('/api/auth', AuthController);
 app.use('/api/jobs', JobsController);

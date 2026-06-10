@@ -40,6 +40,17 @@ app.use('/api/jobseeker-profile', JobSeekerProfileController);
 app.use('/api/analytics', AnalyticsController);
 app.use('/api/company', CompanyController);
 
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Unhandled Error:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+    error: err.toString(),
+    stack: err.stack
+  });
+});
+
 // Diagnostic DB connection tester
 app.get('/api/db-test', async (req, res) => {
   try {

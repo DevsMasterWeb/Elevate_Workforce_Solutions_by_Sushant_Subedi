@@ -40,7 +40,7 @@ const AIRecommendations: React.FC<AIRecommendationsProps> = ({ userProfile }) =>
       }
 
       // 2. Use Gemini to rank and recommend
-      const rawKey = process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY;
+      const rawKey = process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY || "AIzaSyCcQE8rHvLTuTn9udfgArBJ1dbGSm7mrug";
       let apiKey = rawKey?.replace(/['"]+/g, '').trim();
       
       if (apiKey === 'AI Studio Free Tier') {

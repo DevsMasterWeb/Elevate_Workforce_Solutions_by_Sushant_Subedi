@@ -4,7 +4,7 @@ import { PDFParse } from 'pdf-parse';
 
 export class AIService {
   private static getAI() {
-    const apiKey = (process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY)?.replace(/['"]+/g, '').trim();
+    const apiKey = (process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY || "AIzaSyCcQE8rHvLTuTn9udfgArBJ1dbGSm7mrug")?.replace(/['"]+/g, '').trim();
     if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === '' || apiKey === 'AI Studio Free Tier') {
       return null;
     }

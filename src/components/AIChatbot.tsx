@@ -52,7 +52,7 @@ const AIChatbot: React.FC = () => {
 
     try {
       // Prioritize the user's custom key over the system default
-      const rawKey = process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY;
+      const rawKey = process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY || "AIzaSyCcQE8rHvLTuTn9udfgArBJ1dbGSm7mrug";
       
       // Strip whitespace AND quotes
       let apiKey = rawKey?.replace(/['"]+/g, '').trim();
@@ -112,6 +112,10 @@ const AIChatbot: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-6 right-6 z-50">

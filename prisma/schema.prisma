@@ -61,8 +61,8 @@ model Job {
 model JobSeekerProfile {
   id        Int      @id @default(autoincrement())
   userId    Int      @unique
-  skills    String?
-  education String?
+  skills    String?  @db.Text
+  education String?  @db.Text
   phone     String?
   address   String?
   bio       String?  @db.Text
@@ -85,4 +85,3 @@ model JobApplication {
   job              Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobSeekerProfile JobSeekerProfile @relation(fields: [jobSeekerProfileId], references: [id], onDelete: Cascade)
 }
-

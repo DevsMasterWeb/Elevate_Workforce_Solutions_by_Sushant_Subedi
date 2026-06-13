@@ -435,7 +435,7 @@ const Dashboard: React.FC = () => {
                               <span className="flex items-center gap-1"><Mail size={12} /> {app.applicantEmail}</span>
                               {app.phone && <span className="flex items-center gap-1"><Phone size={12} /> {app.phone}</span>}
                             </div>
-                            {app.atsScore !== undefined && (
+                            {app.atsScore !== undefined && app.atsScore !== null && (
                               <div className="mt-2 flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
                                   <Badge className={`${app.atsScore >= 80 ? 'bg-green-100 text-green-700' : app.atsScore >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} border-none font-bold`}>

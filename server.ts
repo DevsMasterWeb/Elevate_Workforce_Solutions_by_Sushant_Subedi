@@ -101,5 +101,53 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
+// Background startup task to backfill any missing ATS scores
+async function backfillApplications() {
+  try {
+    const unanalyzed = await prisma.jobApplication.findMany({
+      where: {
+        OR: [
+          { atsScore: null },
+          { aiFeedback: null }
+        ]
+      },
+      include: {
+        job: true,
+        jobSeekerProfile: true
+      }
+    });
+
+    if (unanalyzed.length > 0) {
+      console.log(`[Backfill] Found ${unanalyzed.length} applications missing ATS analysis. Processing backfill...`);
+      const { AIService } = await import('./src/server/Services/AIService');
+      for (const app of unanalyzed) {
+        try {
+          const result = await AIService.analyzeApplication(
+            app.job.description,
+            app.job.requirements || '',
+            app.jobSeekerProfile
+          );
+          await prisma.jobApplication.update({
+            where: { id: app.id },
+            data: {
+              atsScore: result.score !== null ? result.score : 0,
+              aiFeedback: result.feedback || 'Analysis processed.'
+            }
+          });
+          console.log(`[Backfill] Successfully backfilled ATS Score for app #${app.id} (${result.score}%)`);
+        } catch (err) {
+          console.error(`[Backfill] Failed analyzing application #${app.id}:`, err);
+        }
+      }
+      console.log('[Backfill] All operations complete.');
+    }
+  } catch (error) {
+    console.error('[Backfill Task failed on startup]', error);
+  }
+}
+
+// Run backfill non-blockingly
+backfillApplications();
+
 export default app;
 

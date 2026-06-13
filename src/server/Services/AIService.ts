@@ -5,7 +5,7 @@ import pdf from 'pdf-parse';
 
 export class AIService {
   private static getAI() {
-    const apiKey = (process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY || "AIzaSyCcQE8rHvLTuTn9udfgArBJ1dbGSm7mrug")?.replace(/['"]+/g, '').trim();
+    const apiKey = (process.env.USER_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.MY_CUSTOM_KEY)?.replace(/['"]+/g, '').trim();
     if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey === '' || apiKey === 'AI Studio Free Tier' || apiKey === 'undefined') {
       return null;
     }
@@ -247,6 +247,123 @@ export class AIService {
     } catch (error: any) {
       console.warn("Gemini ATS Analysis failed, deploying smart heuristic analyser fallback:", error.message || error);
       return this.analyzeApplicationFallback(jobDescription, jobRequirements, profile);
+    }
+  }
+
+  /**
+   * Safe fallback for job recommendations when the Gemini API is offline, ratelimited, or invalid
+   */
+  private static recommendJobsFallback(jobs: any[], profile: any) {
+    const candidateSkills = (profile.skills || '').toLowerCase();
+    const candidateBio = (profile.bio || '').toLowerCase();
+    const candidateEdu = (profile.education || '').toLowerCase();
+
+    const matches = jobs.map((job: any) => {
+      const textToMatch = `${job.title} ${job.companyName || job.company || ''} ${job.description || ''} ${job.requirements || ''}`.toLowerCase();
+      
+      const skillsList = candidateSkills.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+      let matchCount = 0;
+      const matchedSkillsList: string[] = [];
+      for (const s of skillsList) {
+        if (textToMatch.includes(s)) {
+          matchCount++;
+          matchedSkillsList.push(s);
+        }
+      }
+
+      let score = 55; // base score
+      if (skillsList.length > 0) {
+        const ratio = matchCount / Math.min(skillsList.length, 8);
+        score += Math.round(ratio * 35);
+      }
+
+      const eduKeywords = ["bachelor", "master", "degree", "computer science", "engineering", "bsc", "mca", "bca"];
+      let hasEduMatch = false;
+      for (const k of eduKeywords) {
+        if (textToMatch.includes(k) && candidateEdu.includes(k)) {
+          hasEduMatch = true;
+          break;
+        }
+      }
+      if (hasEduMatch) {
+         score += 10;
+      }
+
+      score = Math.max(45, Math.min(98, score));
+      
+      const firstMatched = matchedSkillsList.map(s => s.toUpperCase()).slice(0, 3).join(', ');
+      let reason = `Based on your profile, your skillset shows suitable alignment with the role's stack.`;
+      if (firstMatched) {
+        reason = `Great match with your key skills in: ${firstMatched}. This role is highly recommended.`;
+      } else if (score >= 70) {
+        reason = `Good general match with your academic and professional background described in your bio.`;
+      }
+
+      return {
+        jobId: job.id,
+        title: job.title,
+        company: job.companyName || job.company || "Company",
+        matchScore: score,
+        reason
+      };
+    });
+
+    return matches.sort((a, b) => b.matchScore - a.matchScore).slice(0, 3);
+  }
+
+  static async recommendJobs(jobs: any[], profile: any) {
+    const ai = this.getAI();
+    if (!ai) {
+      console.log("No valid Gemini API key found, running job recommendation fallback...");
+      return this.recommendJobsFallback(jobs, profile);
+    }
+
+    try {
+      const prompt = `
+        User Profile:
+        Skills: ${profile.skills || 'Not specified'}
+        Education: ${profile.education || 'Not specified'}
+        Bio: ${profile.bio || 'Not specified'}
+        
+        Available Jobs:
+        ${JSON.stringify(jobs.map((j: any) => ({ id: j.id, title: j.title, company: j.companyName || j.company, description: (j.description || "").substring(0, 200) })))}
+        
+        Task:
+        Analyze the user's profile and the available jobs. Recommend the top 3 jobs that are the best fit for this user.
+        Return the result as a JSON array of objects with these fields:
+        - jobId (number)
+        - title (string)
+        - company (string)
+        - matchScore (number, 0-100)
+        - reason (string, a short explanation of why this is a good match)
+      `;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                jobId: { type: Type.NUMBER },
+                title: { type: Type.STRING },
+                company: { type: Type.STRING },
+                matchScore: { type: Type.NUMBER },
+                reason: { type: Type.STRING },
+              },
+              required: ["jobId", "title", "company", "matchScore", "reason"]
+            }
+          }
+        }
+      });
+
+      return JSON.parse(response.text || '[]');
+    } catch (error: any) {
+      console.warn("Gemini recommendations failed, deploying fallback analyzer:", error.message || error);
+      return this.recommendJobsFallback(jobs, profile);
     }
   }
 }
